@@ -1,10 +1,10 @@
-var deproot,
+var coffeePulled, deproot,
     fs   = require('fs'),
     path = require('path'),
     info = {};
 
 
-function recursivePullDir(extensions, root, dir) {
+function recursivePullDir(extensions, root, dir, exclude) {
   var char, dpath, ext, i, name, node, parts,
       nodes = fs.readdirSync(root + path.sep + dir),
       len   = nodes.length;
@@ -12,14 +12,19 @@ function recursivePullDir(extensions, root, dir) {
   for (i = 0; i < len; i += 1) {
     node = nodes[i];
     char = node.substr(0, 1);
-    if (char !== '.' && char !== '~' && char !== '!' && node !== 'node_modules') {
+    if (char !== '.' && char !== '~' && char !== '!' && node !== 'node_modules' &&
+      exclude.indexOf((dir ? dir + path.sep : '') + node) === -1
+    ) {
       parts = node.split('.');
       ext   = parts.pop();
       name  = parts.join('.');
       dpath = root + path.sep + dir + path.sep + node;
 
       if (ext === 'coffee') {
-        require('coffee-script/register');
+        if (!coffeePulled) {
+          require('coffee-script/register');
+          coffeePulled = true;
+        }
       }
 
       if (~extensions.indexOf(ext) && node.length - 1 > ext.length) { // file
@@ -28,7 +33,7 @@ function recursivePullDir(extensions, root, dir) {
         }
         info[name] = {extension: ext, path: dpath, module: null};
       } else if (fs.lstatSync(dpath).isDirectory()) {
-        recursivePullDir(extensions, root, (dir ? dir + path.sep : '') + node);
+        recursivePullDir(extensions, root, (dir ? dir + path.sep : '') + node, exclude);
       }
     }
   }
@@ -36,6 +41,9 @@ function recursivePullDir(extensions, root, dir) {
 
 
 function pull(dir, options) {
+  var i, len,
+      exclude = [];
+
   dir = path.resolve(dir);
 
   if (options == null) {
@@ -44,11 +52,26 @@ function pull(dir, options) {
   if (typeof options !== 'object') {
     throw new Error('options must be an object');
   }
+
   if (options.forceUpdateRootDir == null) {
     options.forceUpdateRootDir = false;
   }
+
   if (options.extensions == null) {
     options.extensions = ['js', 'coffee'];
+  }
+
+  if (typeof options.exclude === 'string') {
+    exclude.push(options.exclude.split('/').join(path.sep).split('\\').join(path.sep));
+  } else if (Array.isArray(options.exclude)) {
+    for (i = 0, len = options.exclude.length; i < len; i += 1) {
+      if (typeof options.exclude[i] !== 'string') {
+        throw new Error('option exclude must only contain string or an array of strings');
+      }
+      exclude.push(options.exclude[i].split('/').join(path.sep).split('\\').join(path.sep));
+    }
+  } else if (options.exclude != null) {
+    throw new Error('option exclude must only contain string or an array of strings');
   }
 
   if (deproot == null || options.forceUpdateRootDir) {
@@ -61,7 +84,7 @@ function pull(dir, options) {
     throw new Error('not a directory: ' + dir);
   }
 
-  recursivePullDir(options.extensions, dir, '');
+  recursivePullDir(options.extensions, dir, '', exclude);
 }
 
 

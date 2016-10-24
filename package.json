@@ -1,6 +1,6 @@
 {
   "name": "depx",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
   "main": "depx.js",
   "scripts": {
@@ -8,9 +8,6 @@
   },
   "author": "Greg Varsanyi",
   "license": "MIT",
-  "dependencies": {
-    "coffee-script": "^1.10.0"
-  },
   "repository": {
     "type": "git",
     "url": "git@github.com:gvarsanyi/depx.git"
